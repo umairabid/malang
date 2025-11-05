@@ -1,0 +1,23 @@
+[Unit]
+Description=Interactive installer before login
+DefaultDependencies=no
+Before=getty@tty1.service getty.target
+After=network-online.target systemd-user-sessions.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bayan_installer
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+StandardOutput=inherit
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

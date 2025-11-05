@@ -1,0 +1,100 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"github.com/manifoldco/promptui"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+)
+
+type Disk struct {
+	Name       string
+	Size       uint64
+	SizeInGb   string
+	Type       string
+	MountPoint string
+}
+
+func listDevices() []string {
+	cmd := exec.Command("lsblk", "-b", "-d", "-o", "NAME,SIZE,TYPE,MOUNTPOINTS")
+	out, err := cmd.Output()
+	if err != nil {
+		panic(err)
+	}
+
+	return strings.Split(string(out), "\n")
+}
+
+func parseDisks(lines []string) []Disk {
+	var disks []Disk
+
+	for _, line := range lines[1:] { // skip header
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+
+		name := fields[0]
+		size, _ := strconv.ParseUint(fields[1], 10, 64)
+		sizeInGb := strconv.FormatUint(size/(1024*1024*1024), 10) + "G"
+
+		dtype := fields[2]
+		var mountPoint string
+
+		if 3 < len(fields) {
+			mountPoint = fields[3]
+		}
+		disks = append(disks, Disk{Name: name, Size: size, Type: dtype, MountPoint: mountPoint, SizeInGb: sizeInGb})
+	}
+
+	return disks
+}
+
+func collectDisks() []Disk {
+	lines := listDevices()
+	return parseDisks(lines)
+}
+
+func main() {
+	var outputFilePath string
+	flag.StringVar(&outputFilePath, "output", "", "Path to the file where final output should be written.")
+	flag.Parse()
+
+	disks := collectDisks()
+	if len(disks) == 0 {
+		fmt.Println("No devices found")
+		os.Exit(1)
+	}
+
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "\U0001F449 {{ .Name | cyan }} ({{ .SizeInGb | red }} bytes, {{ .MountPoint }})",
+		Inactive: "  {{ .Name | cyan }} ({{ .SizeInGb }} bytes, {{ .MountPoint }})",
+		Selected: "\U0001F389 Selected: {{ .Name | green }}",
+	}
+
+	prompt := promptui.Select{
+		Label:     "Select a disk",
+		Items:     disks,
+		Templates: templates,
+		Size:      5,
+	}
+
+	i, _, err := prompt.Run()
+
+	if err != nil {
+		fmt.Println("No device selected")
+		os.Exit(1)
+	}
+
+	if outputFilePath != "" {
+		var data [2]string
+		data[0] = disks[i].Name
+		data[1] = strconv.FormatUint(disks[i].Size, 10)
+		os.WriteFile(outputFilePath, []byte(strings.Join(data[:], "\n")), 0644)
+	}
+	fmt.Printf("You selected %+v\n", disks[i])
+}
