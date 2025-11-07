@@ -1,0 +1,13 @@
+#!/bin/bash
+
+IMG_PATH="./disk/test_disk.img"
+
+# Check if the file exists
+if [ -f "$IMG_PATH" ]; then
+  echo "File already exists at $IMG_PATH"
+  exit 0
+fi
+
+echo "Creating a 100MB test disk image at $IMG_PATH"
+dd if=/dev/zero of="$IMG_PATH" bs=1M count=10240
+sudo losetup -f "$IMG_PATH"
