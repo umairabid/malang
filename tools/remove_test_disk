@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMG_PATH="./disk/test_disk.img"
+IMG_PATH="../disk/test_disk.img"
 
 LOOP_DEVICE=$(losetup -a | grep "$IMG_PATH" | awk -F: '{print $1}')
 
