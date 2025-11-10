@@ -1,3 +1,0 @@
-#!/bin/bash
-
-mkarchiso -v -r -w /tmp/archiso-tmp -o ./dist ./archiso

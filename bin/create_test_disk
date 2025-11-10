@@ -1,6 +1,9 @@
 #!/bin/bash
 
-IMG_PATH="../disk/test_disk.img"
+ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
+
+IMG_PATH="$ROOT_DIR/disk/test_disk.img"
+echo $IMG_PATH
 
 # Check if the file exists
 if [ -f "$IMG_PATH" ]; then

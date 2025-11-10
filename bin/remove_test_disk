@@ -1,8 +1,10 @@
 #!/bin/bash
 
-IMG_PATH="../disk/test_disk.img"
+ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
 
-LOOP_DEVICE=$(losetup -a | grep "$IMG_PATH" | awk -F: '{print $1}')
+IMG_PATH="$ROOT_DIR/disk/test_disk.img"
+
+LOOP_DEVICE=$(losetup -a | grep "$IMG_PATH" | awk -F: '{print $1}' >/dev/null)
 
 if [ -n "$LOOP_DEVICE" ]; then
   echo "Detaching loop device $LOOP_DEVICE"

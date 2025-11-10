@@ -46,7 +46,7 @@ func partitionDisk(disk Disk) [3]string {
 	driveNames := getDriveNames(diskPath)
 	scheme := createScheme(diskPath, diskSize, driveNames)
 	commands := []Command{
-		Command{Args: []string{"wipefs", "-a", diskPath}},
+		Command{Args: []string{"wipefs", "-af", diskPath}},
 		Command{Args: []string{"partprobe", diskPath}},
 		Command{Args: []string{"sfdisk", "-f", diskPath}, Stdin: &scheme},
 		Command{Args: []string{"partprobe", diskPath}},
