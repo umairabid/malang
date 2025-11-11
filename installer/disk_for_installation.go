@@ -29,10 +29,10 @@ func listDevices() []string {
 
 func parseDisks(lines []string) []Disk {
 	var disks []Disk
-
-	for _, line := range lines[1:] { // skip header
+	fmt.Println(lines)
+	for _, line := range lines[1:] {
 		fields := strings.Fields(line)
-		if len(fields) == 0 {
+		if len(fields) < 2 {
 			continue
 		}
 

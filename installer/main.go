@@ -6,9 +6,13 @@ import (
 
 func main() {
 	disk := diskForInstallation()
-	driveNames := partitionDisk(disk)
-	install(driveNames)
 	fmt.Printf("Selected disk for installation: %+v\n", disk)
+
+	driveNames := partitionDisk(disk)
 	fmt.Printf("Created partitions: %v\n", driveNames)
-	fmt.Println("This is a placeholder for the main package.")
+
+	mountPoints := install(driveNames)
+	fmt.Println("Installed Archlinux on disk.")
+
+	configureSystem(mountPoints)
 }
