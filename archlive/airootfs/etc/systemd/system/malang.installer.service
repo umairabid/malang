@@ -7,7 +7,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/bayan_installer
+ExecStart=/usr/local/bin/malang_installer
 StandardInput=tty
 StandardOutput=tty
 StandardError=tty

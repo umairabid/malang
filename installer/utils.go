@@ -23,7 +23,7 @@ func runCommands(commands []Command) {
 		}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Fatalf("Command %q failed: %v\nOutput:\n%s", args, err, string(out))
+			fmt.Printf("Command %q failed: %v\nOutput:\n%s", args, err, string(out))
       panic(err)
 		}
 		fmt.Printf("✅ %v succeeded\n%s\n", args, string(out))
