@@ -9,16 +9,7 @@ const (
 	swapPercent = 10
 )
 
-func getDriveNames(name string) [3]string {
-	efiName := fmt.Sprintf("%sp1", name)
-	swapName := fmt.Sprintf("%sp2", name)
-	rootName := fmt.Sprintf("%sp3", name)
-
-	driveNames := [...]string{efiName, swapName, rootName}
-	return driveNames
-}
-
-func createScheme(name string, size uint64, driveNames [3]string) string {
+func createScheme(name string, size uint64) string {
 	sizeInMb := size / 1024 / 1024
 
 	efiSize := sizeInMb * efiPercent / 100
@@ -28,10 +19,10 @@ func createScheme(name string, size uint64, driveNames [3]string) string {
 	scheme := fmt.Sprintf(`label: gpt
 device: %s
 
-%s : start=, size=%dM, type=uefi
-%s : start=, size=%dM, type=linux-swap
-%s : start=, size=%dM, type=linux
-`, name, driveNames[0], efiSize, driveNames[1], swapSize, driveNames[2], rootSize)
+1 : start=, size=%dM, type=uefi
+2 : start=, size=%dM, type=linux-swap
+3 : start=, size=%dM, type=linux
+`, name, efiSize, swapSize, rootSize)
 	fmt.Printf("--- Partition Scheme ---\n%s\n", scheme)
 	return scheme
 }
@@ -41,8 +32,7 @@ func partitionDisk(disk Disk) [3]string {
 	diskSize := disk.Size
 	diskPath := "/dev/" + diskName
 
-	driveNames := getDriveNames(diskPath)
-	scheme := createScheme(diskPath, diskSize, driveNames)
+	scheme := createScheme(diskPath, diskSize)
 	commands := []Command{
 		Command{Args: []string{"wipefs", "-af", diskPath}},
 		Command{Args: []string{"partprobe", diskPath}},
@@ -53,5 +43,6 @@ func partitionDisk(disk Disk) [3]string {
 
 	fmt.Printf("✅ Partitioning succeeded for\n")
 
-	return driveNames
+	driveNames := getPartitions(diskName)
+	return [3]string{driveNames[0], driveNames[1], driveNames[2]}
 }

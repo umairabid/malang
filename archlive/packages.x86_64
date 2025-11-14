@@ -1,13 +1,70 @@
+# Core system
 base
-cloud-init
-hyperv
 linux
+linux-firmware
+
+# Bootloader and initramfs
 mkinitcpio
 mkinitcpio-archiso
-open-vm-tools
-openssh
-pv
-qemu-guest-agent
 syslinux
-virtualbox-guest-utils-nox
+grub
+efibootmgr
 
+# Essential system utilities
+archiso
+arch-install-scripts
+bash
+coreutils
+util-linux
+systemd
+systemd-sysvcompat
+e2fsprogs
+dosfstools
+exfatprogs
+sudo
+less
+diffutils
+which
+psmisc
+kbd
+nano
+parted
+
+# Terminal support (CRITICAL for getty)
+ncurses
+readline
+filesystem
+glibc
+gcc-libs
+zsh
+terminus-font
+
+# Basic text processing
+sed
+grep
+gawk
+findutils
+procps-ng
+
+# Networking
+iproute2
+iputils
+dhcpcd
+openssh
+
+# File systems
+device-mapper
+lvm2
+exfatprogs
+
+# Additional tools
+shadow
+curl
+pv
+
+# VM/Cloud support
+cloud-init
+hyperv
+open-vm-tools
+qemu-guest-agent
+virtualbox-guest-utils-nox
