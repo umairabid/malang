@@ -1,7 +1,8 @@
-package main
+package services
 
 import (
 	"fmt"
+	"installer.malang/internal/utils"
 )
 
 const (
@@ -27,22 +28,22 @@ device: %s
 	return scheme
 }
 
-func partitionDisk(disk Disk) [3]string {
+func PartitionDisk(disk Disk) [3]string {
 	diskName := disk.Name
 	diskSize := disk.Size
 	diskPath := "/dev/" + diskName
 
 	scheme := createScheme(diskPath, diskSize)
-	commands := []Command{
-		Command{Args: []string{"wipefs", "-af", diskPath}},
-		Command{Args: []string{"partprobe", diskPath}},
-		Command{Args: []string{"sfdisk", "-f", diskPath}, Stdin: &scheme},
-		Command{Args: []string{"partprobe", diskPath}},
+	commands := []utils.Command{
+		{Args: []string{"wipefs", "-af", diskPath}},
+		{Args: []string{"partprobe", diskPath}},
+		{Args: []string{"sfdisk", "-f", diskPath}, Stdin: &scheme},
+		{Args: []string{"partprobe", diskPath}},
 	}
-	runCommands(commands)
+	utils.RunCommands(commands)
 
 	fmt.Printf("✅ Partitioning succeeded for\n")
 
-	driveNames := getPartitions(diskName)
+	driveNames := utils.FetchPartitions(diskName)
 	return [3]string{driveNames[0], driveNames[1], driveNames[2]}
 }

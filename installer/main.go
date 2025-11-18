@@ -2,17 +2,20 @@ package main
 
 import (
 	"fmt"
+  //"installer.malang/internal/services"
+  "installer.malang/internal/ui/app"
 )
 
 func main() {
-	disk := diskForInstallation()
-	fmt.Printf("Selected disk for installation: %+v\n", disk)
+  app.App()
+	//disk := services.DiskForInstallation()
+	//fmt.Printf("Selected disk for installation: %+v\n", disk)
 
-	driveNames := partitionDisk(disk)
-	fmt.Printf("Created partitions: %v\n", driveNames)
+	//driveNames := services.PartitionDisk(disk)
+	//fmt.Printf("Created partitions: %v\n", driveNames)
 
-	mountPoints := install(driveNames)
+	//mountPoints := services.Install(driveNames)
 	fmt.Println("Installed Archlinux on disk.")
 
-	configureSystem(mountPoints)
+	//services.ConfigureSystem(mountPoints)
 }

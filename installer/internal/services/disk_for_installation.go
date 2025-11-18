@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"fmt"
@@ -61,7 +61,7 @@ func collectDisks() []Disk {
 	return parseDisks(lines)
 }
 
-func diskForInstallation() Disk {
+func DiskForInstallation() Disk {
 	disks := collectDisks()
 	if len(disks) == 0 {
 		fmt.Println("No devices found")
