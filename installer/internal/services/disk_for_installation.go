@@ -9,13 +9,7 @@ import (
 	"strings"
 )
 
-type Disk struct {
-	Name       string
-	Size       uint64
-	SizeInGb   string
-	Type       string
-	MountPoint string
-}
+type Disk [5]string
 
 func listDevices() []string {
 	cmd := exec.Command("lsblk", "-b", "-d", "-o", "NAME,SIZE,TYPE,MOUNTPOINTS")
@@ -29,7 +23,6 @@ func listDevices() []string {
 
 func parseDisks(lines []string) []Disk {
 	var disks []Disk
-	fmt.Println(lines)
 	for _, line := range lines[1:] {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -49,20 +42,20 @@ func parseDisks(lines []string) []Disk {
 		}
 
 		if sizeInGb > 0 {
-			disks = append(disks, Disk{Name: name, Size: size, Type: dtype, MountPoint: mountPoint, SizeInGb: formattedSizeInGb})
+			disks = append(disks, Disk{name, size, dtype, mountPoint, formattedSizeInGb} )
 		}
 	}
 
 	return disks
 }
 
-func collectDisks() []Disk {
+func CollectDisks() []Disk {
 	lines := listDevices()
 	return parseDisks(lines)
 }
 
 func DiskForInstallation() Disk {
-	disks := collectDisks()
+	disks := CollectDisks()
 	if len(disks) == 0 {
 		fmt.Println("No devices found")
 		os.Exit(1)

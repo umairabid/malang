@@ -2,5 +2,5 @@
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
 
-cd ../installer
+cd "$ROOT_DIR/installer" || exit 1 
 go build -o ../dist/malang_installer
