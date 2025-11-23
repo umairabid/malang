@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-  //"installer.malang/internal/services"
-  "installer.malang/internal/ui/app"
+	//"installer.malang/internal/services"
+	"installer.malang/internal/ui/app"
 )
 
 func main() {
-  app.App()
+	app.App()
 	//disk := services.DiskForInstallation()
 	//fmt.Printf("Selected disk for installation: %+v\n", disk)
 

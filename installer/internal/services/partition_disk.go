@@ -28,9 +28,7 @@ device: %s
 	return scheme
 }
 
-func PartitionDisk(disk Disk) [3]string {
-	diskName := disk.Name
-	diskSize := disk.Size
+func PartitionDisk(diskName string, diskSize uint64) [3]string {
 	diskPath := "/dev/" + diskName
 
 	scheme := createScheme(diskPath, diskSize)
