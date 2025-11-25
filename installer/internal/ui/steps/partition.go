@@ -3,10 +3,11 @@ package steps
 import (
   "fmt"
   "strconv"
+  "github.com/charmbracelet/lipgloss"
 
   tea "github.com/charmbracelet/bubbletea"
-  "github.com/charmbracelet/lipgloss"
   types "installer.malang/internal/types"
+  services "installer.malang/internal/services"
 )
 
 type PartitionModel struct {
@@ -27,31 +28,6 @@ func InitPartitionStep(selectedDisk types.Disk) tea.Model {
 
 func (m PartitionModel) Init() tea.Cmd {
   return nil
-}
-
-func validatePercentages(percentages [3]string) ([3]int, error) {
-  labels := [3]string{"boot", "swap", "root"}
-  var values [3]int
-  total := 0
-
-  for i, percent := range percentages {
-    val, err := strconv.Atoi(percent)
-    if err != nil || val < 0 {
-      return [3]int{}, fmt.Errorf("%s percentage must be a valid positive number", labels[i])
-    }
-    values[i] = val
-    total += val
-  }
-
-  if total > 100 {
-    return [3]int{}, fmt.Errorf("total percentage (%d%%) exceeds 100%%", total)
-  }
-
-  if total < 100 {
-    return [3]int{}, fmt.Errorf("total percentage (%d%%) is less than 100%%", total)
-  }
-
-  return values, nil
 }
 
 func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -75,12 +51,10 @@ func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.errorMsg = err.Error()
         return m, nil
       }
-
+      
+      driveNames := services.PartitionDisk(m.disk, values)
       return m, func() tea.Msg {
-        return types.PartitionConfigMsg{
-          Disk:        m.disk,
-          Percentages: values,
-        }
+        return types.PartitionConfigMsg(driveNames)
       }
 
     case "backspace":
@@ -100,6 +74,28 @@ func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
   }
 
   return m, nil
+}
+
+func (m PartitionModel) View() string {
+  title := fmt.Sprintf("Configure Partitions for %s (%s)\n\n", m.disk.Name, m.disk.SizeInGb)
+
+  labels := [3]string{"Boot (EFI): ", "Swap:       ", "Root:       "}
+
+  var lines string
+  for i, label := range labels {
+    value := m.percentages[i] + "%"
+    lines += label + applyStyle(value, m.focusedField == i) + "\n"
+  }
+
+  totalLabel := totalLabel(m)
+  help := "\n\n(↑/↓/tab: navigate • 0-9: enter value • enter: confirm • q: quit)"
+
+  errorMsg := ""
+  if m.errorMsg != "" {
+    errorMsg = "\n" + errorStyle().Render("Error: "+m.errorMsg)
+  }
+
+  return title + lines + totalLabel + errorMsg + help
 }
 
 func focusedStyle() lipgloss.Style {
@@ -143,24 +139,27 @@ func totalLabel(m PartitionModel) string {
   return label
 }
 
-func (m PartitionModel) View() string {
-  title := fmt.Sprintf("Configure Partitions for %s (%s)\n\n", m.disk.Name, m.disk.SizeInGb)
+func validatePercentages(percentages [3]string) ([3]int, error) {
+  labels := [3]string{"boot", "swap", "root"}
+  var values [3]int
+  total := 0
 
-  labels := [3]string{"Boot (EFI): ", "Swap:       ", "Root:       "}
-
-  var lines string
-  for i, label := range labels {
-    value := m.percentages[i] + "%"
-    lines += label + applyStyle(value, m.focusedField == i) + "\n"
+  for i, percent := range percentages {
+    val, err := strconv.Atoi(percent)
+    if err != nil || val < 0 {
+      return [3]int{}, fmt.Errorf("%s percentage must be a valid positive number", labels[i])
+    }
+    values[i] = val
+    total += val
   }
 
-  totalLabel := totalLabel(m)
-  help := "\n\n(↑/↓/tab: navigate • 0-9: enter value • enter: confirm • q: quit)"
-
-  errorMsg := ""
-  if m.errorMsg != "" {
-    errorMsg = "\n" + errorStyle().Render("Error: "+m.errorMsg)
+  if total > 100 {
+    return [3]int{}, fmt.Errorf("total percentage (%d%%) exceeds 100%%", total)
   }
 
-  return title + lines + totalLabel + errorMsg + help
+  if total < 100 {
+    return [3]int{}, fmt.Errorf("total percentage (%d%%) is less than 100%%", total)
+  }
+
+  return values, nil
 }

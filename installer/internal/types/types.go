@@ -10,8 +10,5 @@ type Disk struct {
 
 type SelectedDiskMsg Disk
 
-type PartitionConfigMsg struct {
-  Disk        Disk
-  Percentages [3]int // [boot, swap, root]
-}
+type PartitionConfigMsg [3]string 
 

@@ -12,6 +12,7 @@ import (
 type model struct {
   currentStep tea.Model
   selectedDisk types.Disk
+  drives      types.PartitionConfigMsg
 }
 
 func App() {
@@ -41,6 +42,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     fmt.Println("Selected disk for installation:", msg)
     m.selectedDisk = types.Disk(msg)
     m.currentStep = steps.InitPartitionStep(m.selectedDisk)
+    return m, nil
+  case types.PartitionConfigMsg:
+    fmt.Println("Partition configuration received:", msg)
+    m.drives = msg
     return m, nil
   }
   return m, cmd

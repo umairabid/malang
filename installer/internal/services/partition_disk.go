@@ -3,6 +3,8 @@ package services
 import (
 	"fmt"
 	"installer.malang/internal/utils"
+
+  types "installer.malang/internal/types"
 )
 
 func createScheme(name string, size uint64, percentages [3]int) string {
@@ -23,9 +25,11 @@ device: %s
 	return scheme
 }
 
-func PartitionDisk(diskName string, diskSize uint64, percentages [3]int) [3]string {
-	diskPath := "/dev/" + diskName
+func PartitionDisk(disk types.Disk, percentages [3]int) [3]string {
+  diskName := disk.Name
+  diskSize := disk.Size
 
+	diskPath := "/dev/" + diskName
 	scheme := createScheme(diskPath, diskSize, percentages)
 	commands := []utils.Command{
 		{Args: []string{"wipefs", "-af", diskPath}},
