@@ -10,5 +10,7 @@ type Disk struct {
 
 type SelectedDiskMsg Disk
 
-type PartitionConfigMsg [3]string 
+type PartitionConfigMsg [3]string
+
+type InstallCompleteMsg [2]string 
 
