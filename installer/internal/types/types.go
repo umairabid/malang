@@ -8,6 +8,17 @@ type Disk struct {
   MountPoint string
 }
 
+type ProgressUpdate struct {
+	Message string
+  Step    int
+  Success bool
+}
+
+type InstallPackageStream struct {
+  Line string
+  Source string
+}
+
 type SelectedDiskMsg Disk
 
 type PartitionConfigMsg [3]string

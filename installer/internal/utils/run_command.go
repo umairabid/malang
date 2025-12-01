@@ -11,7 +11,7 @@ type Command struct {
 	Stdin *string
 }
 
-func RunCommands(commands []Command) {
+func RunCommands(commands []Command) error {
 	for _, command := range commands {
 		args := command.Args
 		fmt.Printf("✅ %v running\n", args)
@@ -24,8 +24,9 @@ func RunCommands(commands []Command) {
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("Command %q failed: %v\nOutput:\n%s", args, err, string(out))
-			panic(err)
+      return err
 		}
 		fmt.Printf("✅ %v succeeded\n%s\n", args, string(out))
 	}
+  return nil
 }

@@ -2,22 +2,18 @@ package services
 
 import (
 	"bufio"
-	"fmt"
 	"installer.malang/internal/utils"
+	"io"
 	"os/exec"
-)
 
-type ProgressUpdate struct {
-	Current int
-	Total   int
-	Message string
-}
+	types "installer.malang/internal/types"
+)
 
 const RootMountPoint = "/mnt"
 const BootDir = "boot/efi"
 const BootMountPoint = RootMountPoint + "/" + BootDir
 
-func preInstallSetup(disks [3]string) {
+func preInstallSetup(disks [3]string) error {
 	efiDisk := disks[0]
 	rootDisk := disks[1]
 	swapDisk := disks[2]
@@ -32,10 +28,10 @@ func preInstallSetup(disks [3]string) {
 		{Args: []string{"mount", efiDisk, BootMountPoint}},
 	}
 
-	utils.RunCommands(prepareCommands)
+	return utils.RunCommands(prepareCommands)
 }
 
-func postInstallSetup() {
+func postInstallSetup() error {
 	prepareCommands := []utils.Command{
 		{Args: []string{"genfstab", "-U", "/mnt", ">>", RootMountPoint + "/etc/fstab"}},
 		{Args: []string{"mount", "--types", "proc", "/proc", "/mnt/proc"}},
@@ -43,70 +39,57 @@ func postInstallSetup() {
 		{Args: []string{"mount", "--rbind", "/dev", "/mnt/dev"}},
 		{Args: []string{"mount", "--rbind", "/run", "/mnt/run"}},
 	}
-	utils.RunCommands(prepareCommands)
+	return utils.RunCommands(prepareCommands)
 }
 
-func InstallPackages() {
+func startStream(pipe io.ReadCloser, streamName string, streamChan chan<- types.InstallPackageStream) {
+	go func() {
+		scanner := bufio.NewScanner(pipe)
+		for scanner.Scan() {
+			streamChan <- types.InstallPackageStream{
+				Line:   scanner.Text(),
+				Source: streamName,
+			}
+		}
+	}()
+}
+
+func InstallPackages(streamChan chan<- types.InstallPackageStream) {
 	cmd := exec.Command("pacstrap", "/mnt", "base", "linux", "linux-firmware", "vim", "networkmanager", "efibootmgr", "grub")
 	stderr, _ := cmd.StderrPipe()
+	stdout, _ := cmd.StdoutPipe()
+
+	startStream(stderr, "stderr", streamChan)
+	startStream(stdout, "stdout", streamChan)
+
 	cmd.Start()
-
-	reader := bufio.NewReader(stderr)
-	var line []byte
-	var totalPackages int
-	var currentPackage int
-
-	for {
-		b, err := reader.ReadByte()
-		if err != nil {
-			break
-		}
-
-		// Carriage return or newline indicates end of current output
-		if b == '\r' || b == '\n' {
-			if len(line) > 0 {
-				lineStr := string(line)
-
-				// Parse package progress: "(X/Y) installing/downloading..."
-				var current, total int
-				if n, _ := fmt.Sscanf(lineStr, "(%d/%d)", &current, &total); n == 2 {
-					totalPackages = total
-					currentPackage = current
-
-					// Calculate and print overall percentage
-					if totalPackages > 0 {
-						overallPercent := (currentPackage * 100) / totalPackages
-						fmt.Printf("\rProgress: %d%% - %s", overallPercent, lineStr)
-					}
-				} else {
-					// Print other output normally
-					fmt.Print("\r" + lineStr)
-				}
-
-				line = line[:0]
-			}
-		} else {
-			line = append(line, b)
-		}
-	}
-
-	fmt.Println("\nInstallation complete: 100%")
-	cmd.Wait()
 }
 
-func Install(disks [3]string, progressChan chan<- ProgressUpdate) [2]string {
-  preInstallSetup(disks)
-  InstallPackages()
-  postInstallSetup()
+func emitPackageInstallProgress(err error, progressChan chan<- types.ProgressUpdate) {
+	if err != nil {
+		progressChan <- types.ProgressUpdate{
+			Message: "Failed to prepare disks: " + err.Error(),
+			Step:    1,
+			Success: false,
+		}
+	} else {
+		progressChan <- types.ProgressUpdate{
+			Message: "Installing packages.",
+			Step:    2,
+			Success: true,
+		}
+	}
+}
 
-  /**
-  if progressChan != nil {
-    progressChan <- ProgressUpdate{
-      Current: i + 1,
-      Total:   total,
-      Message: commandDescriptions[i],
-    }
-  }
-  **/
-  return [2]string{RootMountPoint, BootDir}
+func Install(
+	disks [3]string,
+	progressChan chan<- types.ProgressUpdate,
+	streamChan chan<- types.InstallPackageStream,
+) [2]string {
+	err := preInstallSetup(disks)
+  emitPackageInstallProgress(err, progressChan)
+	InstallPackages(streamChan)
+	postInstallSetup()
+
+	return [2]string{RootMountPoint, BootDir}
 }
