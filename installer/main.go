@@ -2,15 +2,16 @@ package main
 
 import (
 	"installer.malang/internal/ui/app"
+  "os"
 )
 
-const MODE = "cli"
-
 func main() {
-  if MODE == "app" {
-    runAppMode()
-  } else {
+  mode := os.Getenv("MODE")
+
+  if mode == "cli" {
     RunCliMode()
+  } else {
+    runAppMode()
   }
 }
 

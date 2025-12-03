@@ -5,6 +5,7 @@ import (
 	"installer.malang/internal/utils"
 	"io"
 	"os/exec"
+  "time"
 
 	types "installer.malang/internal/types"
 )
@@ -44,6 +45,7 @@ func postInstallSetup() error {
 
 func startStream(pipe io.ReadCloser, streamName string, streamChan chan<- types.InstallPackageStream) {
 	go func() {
+		defer pipe.Close()
 		scanner := bufio.NewScanner(pipe)
 		for scanner.Scan() {
 			streamChan <- types.InstallPackageStream{
@@ -54,7 +56,7 @@ func startStream(pipe io.ReadCloser, streamName string, streamChan chan<- types.
 	}()
 }
 
-func InstallPackages(streamChan chan<- types.InstallPackageStream) {
+func InstallPackages(streamChan chan<- types.InstallPackageStream) error {
 	cmd := exec.Command("pacstrap", "/mnt", "base", "linux", "linux-firmware", "vim", "networkmanager", "efibootmgr", "grub")
 	stderr, _ := cmd.StderrPipe()
 	stdout, _ := cmd.StdoutPipe()
@@ -62,7 +64,11 @@ func InstallPackages(streamChan chan<- types.InstallPackageStream) {
 	startStream(stderr, "stderr", streamChan)
 	startStream(stdout, "stdout", streamChan)
 
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	
+	return cmd.Wait()
 }
 
 func emitPackageInstallProgress(err error, progressChan chan<- types.ProgressUpdate) {
@@ -86,10 +92,43 @@ func Install(
 	progressChan chan<- types.ProgressUpdate,
 	streamChan chan<- types.InstallPackageStream,
 ) [2]string {
+  time.Sleep(10 * time.Second)
+  progressChan <- types.ProgressUpdate{
+    Message: "Starting installation process.",
+    Step:    1,
+    Success: true,
+  }
 	err := preInstallSetup(disks)
-  emitPackageInstallProgress(err, progressChan)
-	InstallPackages(streamChan)
-	postInstallSetup()
-
+	emitPackageInstallProgress(err, progressChan)
+	if err != nil {
+		return [2]string{RootMountPoint, BootDir}
+	}
+	
+	err = InstallPackages(streamChan)
+	if err != nil {
+		progressChan <- types.ProgressUpdate{
+			Message: "Package installation failed: " + err.Error(),
+			Step:    3,
+			Success: false,
+		}
+		return [2]string{RootMountPoint, BootDir}
+	}
+	
+	err = postInstallSetup()
+	if err != nil {
+		progressChan <- types.ProgressUpdate{
+			Message: "Post-install setup failed: " + err.Error(),
+			Step:    3,
+			Success: false,
+		}
+	} else {
+		progressChan <- types.ProgressUpdate{
+			Message: "System installation completed successfully.",
+			Step:    3,
+			Success: true,
+		}
+	}
+  
+  time.Sleep(120 * time.Second)
 	return [2]string{RootMountPoint, BootDir}
 }

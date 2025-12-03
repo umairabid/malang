@@ -2,7 +2,7 @@
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
 
-IMG_PATH="$ROOT_DIR/disk/test_disk.img"
+IMG_PATH="$ROOT_DIR/storage/test_storage.img"
 echo $IMG_PATH
 
 # Check if the file exists
@@ -11,6 +11,6 @@ if [ -f "$IMG_PATH" ]; then
   exit 0
 fi
 
-echo "Creating a 100MB test disk image at $IMG_PATH"
+echo "Creating test disk image at $IMG_PATH"
 dd if=/dev/zero of="$IMG_PATH" bs=1M count=10240
 sudo losetup -f "$IMG_PATH"

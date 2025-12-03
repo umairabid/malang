@@ -2,5 +2,5 @@
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
 
-"$ROOT_DIR/bin/remove_test_disk"
-"$ROOT_DIR/bin/create_test_disk"
+"$ROOT_DIR/bin/remove_storage"
+"$ROOT_DIR/bin/create_storage"

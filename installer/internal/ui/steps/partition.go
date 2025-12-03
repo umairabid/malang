@@ -52,7 +52,11 @@ func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, nil
       }
       
-      driveNames := services.PartitionDisk(m.disk, values)
+      driveNames, err := services.PartitionDisk(m.disk, values)
+      if err != nil {
+        m.errorMsg = fmt.Sprintf("failed to partition disk: %v", err)
+        return m, nil
+      }
       return m, func() tea.Msg {
         return types.PartitionConfigMsg(driveNames)
       }

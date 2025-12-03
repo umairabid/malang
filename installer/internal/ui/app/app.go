@@ -46,6 +46,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
   case types.PartitionConfigMsg:
     fmt.Println("Partition configuration received:", msg)
     m.drives = msg
+    m.currentStep = steps.InitInstallStep(m.drives)
     return m, nil
   }
   return m, cmd
