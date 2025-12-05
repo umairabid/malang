@@ -7,20 +7,24 @@ import (
   types "installer.malang/internal/types"
 )
 
-func createScheme(name string, size uint64, percentages [3]int) string {
-	sizeInMb := size / 1024 / 1024
+func sizes(totalSize uint64, percentages [3]int) [3]uint64 {
+  sizeInMb := totalSize / 1024 / 1024
 
-	bootSize := sizeInMb * uint64(percentages[0]) / 100
-	swapSize := sizeInMb * uint64(percentages[1]) / 100
-	rootSize := sizeInMb * uint64(percentages[2]) / 100
+  bootSize := sizeInMb * uint64(percentages[0]) / 100
+  swapSize := sizeInMb * uint64(percentages[1]) / 100
+  rootSize := sizeInMb * uint64(percentages[2]) / 100
 
+  return [3]uint64{bootSize, swapSize, rootSize}
+}
+
+func createScheme(name string, sizes [3]uint64) string {
 	scheme := fmt.Sprintf(`label: gpt
 device: %s
 
 1 : start=, size=%dM, type=uefi
 2 : start=, size=%dM, type=linux-swap
 3 : start=, size=%dM, type=linux
-`, name, bootSize, swapSize, rootSize)
+`, name, sizes[0], sizes[1], sizes[2])
 	return scheme
 }
 
@@ -29,7 +33,9 @@ func PartitionDisk(disk types.Disk, percentages [3]int) ([3]string, error) {
   diskSize := disk.Size
 
 	diskPath := "/dev/" + diskName
-	scheme := createScheme(diskPath, diskSize, percentages)
+  sizes := sizes(diskSize, percentages)
+
+	scheme := createScheme(diskPath, sizes)
 	commands := []utils.Command{
 		{Args: []string{"wipefs", "-af", diskPath}},
 		{Args: []string{"partprobe", diskPath}},
