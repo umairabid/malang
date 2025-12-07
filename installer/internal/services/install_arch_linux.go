@@ -16,8 +16,8 @@ const BootMountPoint = RootMountPoint + "/" + BootDir
 
 func preInstallSetup(disks [3]string) error {
 	efiDisk := disks[0]
-	swapDisk := disks[2]
-	rootDisk := disks[1]
+	swapDisk := disks[1]
+	rootDisk := disks[2]
 
 	prepareCommands := []utils.Command{
 		{Args: []string{"mkfs.fat", "-F32", efiDisk}},

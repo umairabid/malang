@@ -1,7 +1,6 @@
 package app
 
 import (
-  "fmt"
   "github.com/charmbracelet/lipgloss"
 
   tea "github.com/charmbracelet/bubbletea"
@@ -39,15 +38,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
       return m, tea.Quit
     }
   case types.SelectedDiskMsg:
-    fmt.Println("Selected disk for installation:", msg)
     m.selectedDisk = types.Disk(msg)
     m.currentStep = steps.InitPartitionStep(m.selectedDisk)
-    return m, nil
+    return m, m.currentStep.Init()
+
   case types.PartitionConfigMsg:
-    fmt.Println("Partition configuration received:", msg)
     m.drives = msg
     m.currentStep = steps.InitInstallStep(m.drives)
-    return m, nil
+    return m, m.currentStep.Init()
   }
   return m, cmd
 }
