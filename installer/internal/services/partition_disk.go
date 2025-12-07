@@ -35,14 +35,20 @@ func PartitionDisk(disk types.Disk, percentages [3]int) ([3]string, error) {
 	diskPath := "/dev/" + diskName
   sizes := sizes(diskSize, percentages)
 
+	resetCommands := []utils.Command{
+		{Args: []string{"swapoff", "-a"}},
+		{Args: []string{"umount", "-f", diskPath + "*"}},
+		{Args: []string{"wipefs", "-af", diskPath}},
+	}
+	utils.RunCommands(resetCommands)
+
 	scheme := createScheme(diskPath, sizes)
 	commands := []utils.Command{
-		{Args: []string{"wipefs", "-af", diskPath}},
-		{Args: []string{"partprobe", diskPath}},
 		{Args: []string{"sfdisk", "-f", diskPath}, Stdin: &scheme},
-		{Args: []string{"partprobe", diskPath}},
+		{Args: []string{"partprobe", diskPath}}, // Add new partitions to kernel
 	}
   err := utils.RunCommands(commands)
+ 
   if err != nil {
     return [3]string{}, err
   }
