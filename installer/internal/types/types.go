@@ -19,9 +19,15 @@ type InstallPackageStream struct {
   Source string
 }
 
+type NetworkStatusMsg bool
+
 type SelectedDiskMsg Disk
 
+type StartPartitioningMsg bool
+
 type PartitionConfigMsg [3]string
+
+type PartitionError string
 
 type InstallCompleteMsg [2]string 
 

@@ -1,12 +1,13 @@
-package steps
+package ui
 
 import (
   "fmt"
 
   "github.com/charmbracelet/bubbles/table"
-  tea "github.com/charmbracelet/bubbletea"
   "github.com/charmbracelet/lipgloss"
+
   services "installer.malang/internal/services"
+  tea "github.com/charmbracelet/bubbletea"
   types "installer.malang/internal/types"
 )
 

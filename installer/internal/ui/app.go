@@ -1,10 +1,10 @@
-package app
+package ui
 
 import (
   "github.com/charmbracelet/lipgloss"
+  "fmt"
 
   tea "github.com/charmbracelet/bubbletea"
-  steps  "installer.malang/internal/ui/steps"
   types  "installer.malang/internal/types"
 )
 
@@ -20,12 +20,15 @@ func App() {
 
 func initApp() tea.Model {
   model := model{}
-  model.currentStep = steps.InitDiskStep()
+  model.currentStep = InitNetworkStep()
   return model
 }
 
 func (m model) Init() tea.Cmd {
-  return tea.SetWindowTitle("Malang Installer")
+  return tea.Batch( 
+    m.currentStep.Init(),
+    tea.SetWindowTitle("Malang Installer"),
+  )
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -38,13 +41,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
       return m, tea.Quit
     }
   case types.SelectedDiskMsg:
+    fmt.Println("Disk selected:", msg)
     m.selectedDisk = types.Disk(msg)
-    m.currentStep = steps.InitPartitionStep(m.selectedDisk)
+    m.currentStep = InitPartitionStep(m.selectedDisk)
     return m, m.currentStep.Init()
 
   case types.PartitionConfigMsg:
     m.drives = msg
-    m.currentStep = steps.InitInstallStep(m.drives)
+    m.currentStep = InitInstallStep(m.drives)
+    fmt.Println("Drives selected:", m.drives)
+  
     return m, m.currentStep.Init()
   }
   return m, cmd

@@ -1,9 +1,8 @@
-package steps
+package ui
 
 import (
   "fmt"
   "strconv"
-  "github.com/charmbracelet/lipgloss"
 
   tea "github.com/charmbracelet/bubbletea"
   types "installer.malang/internal/types"
@@ -15,6 +14,7 @@ type PartitionModel struct {
   percentages  [3]string
   focusedField int
   errorMsg     string
+  isPatitioning bool
 }
 
 func InitPartitionStep(selectedDisk types.Disk) tea.Model {
@@ -23,6 +23,21 @@ func InitPartitionStep(selectedDisk types.Disk) tea.Model {
     percentages:  [3]string{"20", "10", "70"},
     focusedField: 0,
     errorMsg:     "",
+    isPatitioning: false,
+  }
+}
+
+
+func paritionDisks(m PartitionModel) tea.Cmd {
+  return func() tea.Msg {
+    fmt.Println("Partitioning disk with percentages:", m.percentages)
+    values, _ := validatePercentages(m.percentages)
+    driveNames, err := services.PartitionDisk(m.disk, values)
+    if err != nil {
+      fmt.Println("Error partitioning disk:", err)
+      return types.PartitionError(err.Error())
+    }
+    return types.PartitionConfigMsg(driveNames)
   }
 }
 
@@ -46,19 +61,13 @@ func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
       m.errorMsg = ""
 
     case "enter":
-      values, err := validatePercentages(m.percentages)
+      _, err := validatePercentages(m.percentages)
       if err != nil {
         m.errorMsg = err.Error()
         return m, nil
       }
-      
-      driveNames, err := services.PartitionDisk(m.disk, values)
-      if err != nil {
-        m.errorMsg = fmt.Sprintf("failed to partition disk: %v", err)
-        return m, nil
-      }
       return m, func() tea.Msg {
-        return types.PartitionConfigMsg(driveNames)
+        return types.StartPartitioningMsg(true)
       }
 
     case "backspace":
@@ -75,6 +84,14 @@ func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.errorMsg = ""
       }
     }
+  case types.StartPartitioningMsg:
+    m.isPatitioning = true
+    return m, paritionDisks(m)
+
+  case types.PartitionError:
+    m.isPatitioning = false
+    m.errorMsg = string(msg)
+    return m, nil
   }
 
   return m, nil
@@ -99,32 +116,14 @@ func (m PartitionModel) View() string {
     errorMsg = "\n" + errorStyle().Render("Error: "+m.errorMsg)
   }
 
-  return title + lines + totalLabel + errorMsg + help
-}
-
-func focusedStyle() lipgloss.Style {
-  return lipgloss.NewStyle().
-  Foreground(lipgloss.Color("229")).
-  Background(lipgloss.Color("57")).
-  Bold(true)
-}
-
-func normalStyle() lipgloss.Style {
-  return lipgloss.NewStyle().
-  Foreground(lipgloss.Color("240"))
-}
-
-func errorStyle() lipgloss.Style {
-  return lipgloss.NewStyle().
-  Foreground(lipgloss.Color("196")).
-  Bold(true)
-}
-
-func applyStyle(s string, focused bool) string {
-  if focused {
-    return focusedStyle().Render(s)
+  if m.isPatitioning {
+    lines = "\nPartitioning disks, please wait...\n"
+    help = ""
+    totalLabel = ""
+    errorMsg = ""
   }
-  return normalStyle().Render(s)
+
+  return title + lines + totalLabel + errorMsg + help
 }
 
 func totalLabel(m PartitionModel) string {

@@ -1,4 +1,4 @@
-package steps
+package ui
 
 import (
 	"fmt"
@@ -43,40 +43,43 @@ func performInstall(
 	progressChan chan types.ProgressUpdate,
 	streamChan chan types.InstallPackageStream,
 ) tea.Cmd {
-	return func() tea.Msg {
-		services.Install([3]string(drives), progressChan, streamChan)
-		return progressUpdateMsg(types.ProgressUpdate{
-			Message: "Installation complete.",
-			Step:    4,
-			Success: true,
-		})
-	}
+  return func() tea.Msg {
+    go func() {
+      services.Install([3]string(drives), progressChan, streamChan)
+      progressChan <- types.ProgressUpdate{
+        Message: "Installation complete.",
+        Step:    4,
+        Success: true,
+      }
+    }()
+    return nil
+  }
 }
 
 func InitInstallStep(drives types.PartitionConfigMsg) tea.Model {
-	progressChan := make(chan types.ProgressUpdate, 10)
-	streamChan := make(chan types.InstallPackageStream, 10)
+  progressChan := make(chan types.ProgressUpdate, 10)
+  streamChan := make(chan types.InstallPackageStream, 10)
 
-	sp := spinner.New()
-	sp.Style = lipgloss.NewStyle()
+  sp := spinner.New()
+  sp.Style = lipgloss.NewStyle()
 
-	return InstallModel{
-		drives:       drives,
-		progressChan: progressChan,
-		streamChan:   streamChan,
-		spinner:      sp,
+  return InstallModel{
+    drives:       drives,
+    progressChan: progressChan,
+    streamChan:   streamChan,
+    spinner:      sp,
     progressMsg:  types.ProgressUpdate{Message: "Starting installation...", Step: 0, Success: true},
     streamMsgs:   []types.InstallPackageStream{},
-	}
+  }
 }
 
 func (m InstallModel) Init() tea.Cmd {
-	return tea.Batch(
-		m.spinner.Tick,
-		listenForProgress(m.progressChan),
-		listenForStream(m.streamChan),
-		performInstall(m.drives, m.progressChan, m.streamChan),
-	)
+  return tea.Batch(
+    m.spinner.Tick,
+    listenForProgress(m.progressChan),
+    listenForStream(m.streamChan),
+    performInstall(m.drives, m.progressChan, m.streamChan),
+  )
 }
 
 func (m InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -89,7 +92,7 @@ func (m InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     stream := types.InstallPackageStream(msg)
     m.streamMsgs = append(m.streamMsgs, stream)
     return m, listenForStream(m.streamChan) 
-  
+
   case spinner.TickMsg:
     var cmd tea.Cmd
     m.spinner, cmd = m.spinner.Update(msg)
