@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/spinner"
+  "github.com/charmbracelet/bubbles/spinner"
   tea "github.com/charmbracelet/bubbletea"
   services "installer.malang/internal/services"
   types "installer.malang/internal/types"
@@ -57,7 +57,7 @@ func collectWifiConnections() tea.Cmd {
   }
 }
 
-func handleSelectionChange(m SelectNetworkModel, key string) SelectNetworkModel {
+func handleChange(m SelectNetworkModel, key string) SelectNetworkModel {
   if len(m.wifiNetworks) > 0 {
     if key == "up" || key == "shift+tab" {
       m.selectedWifiNetwork = (m.selectedWifiNetwork - 1 + int(len(m.wifiNetworks))) % int(len(m.wifiNetworks))
@@ -77,6 +77,23 @@ func handleSelectionChange(m SelectNetworkModel, key string) SelectNetworkModel 
   return m
 }
 
+func handleSelection(m SelectNetworkModel) (SelectNetworkModel, tea.Cmd) {
+  if len(m.wifiNetworks) > 0 {
+    m.ssid = m.wifiNetworks[m.selectedWifiNetwork].SSID
+    m.loadingMessage = "Collecting Wi-Fi networks for " + m.ssid + "..."
+    return m, checkConnection()
+  } else {
+    if m.selectedNetworkType == WIFI {
+      m.collectWifiCredentials = true
+      m.loadingMessage = "Collecting Wi-Fi networks..."
+      return m, collectWifiConnections()
+    } else {
+      m.loadingMessage = "Checking network connection..." 
+      return m, checkConnection()
+    }
+  }
+}
+
 func (m SelectNetworkModel) Init() tea.Cmd {
   return m.spinner.Tick
 }
@@ -86,19 +103,12 @@ func (m SelectNetworkModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
   case tea.KeyMsg:
     switch msg.String() {
     case "tab", "shift+tab", "up", "down":
-      m = handleSelectionChange(m, msg.String())
+      m = handleChange(m, msg.String())
       return m, nil
     case "enter":
       m.connected = false
       m.errorMessage = ""
-      if m.selectedNetworkType == WIFI {
-        m.collectWifiCredentials = true
-        m.loadingMessage = "Collecting Wi-Fi networks..."
-        return m, collectWifiConnections()
-      } else {
-        m.loadingMessage = "Checking network connection..." 
-        return m, checkConnection()
-      }
+      return handleSelection(m)
     }
   case types.NetworkStatusMsg:
     m.connected = bool(msg)
