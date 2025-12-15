@@ -3,6 +3,8 @@ package services
 import (
 	"os"
 	"installer.malang/internal/services/mocks"
+
+  types "installer.malang/internal/types"
 )
 
 func SelectNetwork() (bool, error) {
@@ -17,4 +19,11 @@ func CheckNetworkConnection() bool {
     return mocks.CheckNetworkConnection()
   }
   return false
+}
+
+func GetWiFiNetworks() ([]types.WiFiNetwork, error) {
+  if os.Getenv("IS_MOCKING") == "true" {
+    return mocks.GetWiFiNetworks()
+  }
+  return []types.WiFiNetwork{}, nil
 }

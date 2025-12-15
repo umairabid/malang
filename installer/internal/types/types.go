@@ -9,7 +9,7 @@ type Disk struct {
 }
 
 type ProgressUpdate struct {
-	Message string
+  Message string
   Step    int
   Success bool
 }
@@ -19,7 +19,25 @@ type InstallPackageStream struct {
   Source string
 }
 
+type WiFiNetwork struct {
+  SSID        string
+  Security    string
+  Signal      int
+  InUse       bool
+  Hidden      bool
+
+  BSSID       string
+  Channel     int
+  Frequency   int
+
+  RequiresPSK bool
+}
+
 type NetworkStatusMsg bool
+
+type WiFiNetworksMsg []WiFiNetwork
+
+type WifiNetworkError string
 
 type SelectedDiskMsg Disk
 
