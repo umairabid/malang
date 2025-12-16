@@ -2,6 +2,8 @@ package ui
 
 import (
   "github.com/charmbracelet/bubbles/spinner"
+  "github.com/charmbracelet/bubbles/textinput"
+
   tea "github.com/charmbracelet/bubbletea"
   services "installer.malang/internal/services"
   types "installer.malang/internal/types"
@@ -16,12 +18,21 @@ type SelectNetworkModel struct {
   wifiNetworks []types.WiFiNetwork
   selectedWifiNetwork int
   ssid string
-  password string
-  collectWifiCredentials bool
+  password textinput.Model
   connected bool
   spinner spinner.Model
   loadingMessage string
   errorMessage string
+}
+
+func initTextInput() textinput.Model {
+  ti := textinput.New()
+  ti.Placeholder = "Enter Wi-Fi Password"
+  ti.CharLimit = 64
+  ti.Width = 30
+  ti.EchoMode = textinput.EchoPassword
+  ti.EchoCharacter = '•'
+  return ti
 }
 
 func InitNetworkStep() tea.Model {
@@ -31,9 +42,8 @@ func InitNetworkStep() tea.Model {
     wifiNetworks: []types.WiFiNetwork{},
     selectedWifiNetwork: 0,
     ssid: "",
-    password: "",
+    password: initTextInput(),
     connected: false,
-    collectWifiCredentials: false,
     spinner: spinner.New(),
     loadingMessage: "",
     errorMessage: "",
@@ -43,7 +53,11 @@ func InitNetworkStep() tea.Model {
 func checkConnection() tea.Cmd {
   return func() tea.Msg {
     connected := services.CheckNetworkConnection()
-    return types.NetworkStatusMsg(connected)
+    if connected {
+      return types.NetworkConnectedMsg(true)
+    } else {
+      return types.NetworkFailureMsg(true)
+    }
   }
 }
 
@@ -54,6 +68,17 @@ func collectWifiConnections() tea.Cmd {
       return types.WifiNetworkError(error.Error())
     }
     return types.WiFiNetworksMsg(networks)
+  }
+}
+
+func connectWithWifi(ssid string, password string) tea.Cmd {
+  return func() tea.Msg {
+    error := services.ConnectWithWiFi(ssid, password)
+    if error != nil {
+      return types.WifiNetworkError(error.Error())
+    } else {
+      return checkConnection()()
+    }
   }
 }
 
@@ -78,13 +103,14 @@ func handleChange(m SelectNetworkModel, key string) SelectNetworkModel {
 }
 
 func handleSelection(m SelectNetworkModel) (SelectNetworkModel, tea.Cmd) {
-  if len(m.wifiNetworks) > 0 {
+  if m.ssid != "" {
+    m.loadingMessage = "Checking network connection for " + m.ssid + "..."
+    return m, connectWithWifi(m.ssid, m.password.Value())
+  } else if len(m.wifiNetworks) > 0 {
     m.ssid = m.wifiNetworks[m.selectedWifiNetwork].SSID
-    m.loadingMessage = "Collecting Wi-Fi networks for " + m.ssid + "..."
-    return m, checkConnection()
+    return m, m.password.Focus()
   } else {
     if m.selectedNetworkType == WIFI {
-      m.collectWifiCredentials = true
       m.loadingMessage = "Collecting Wi-Fi networks..."
       return m, collectWifiConnections()
     } else {
@@ -99,6 +125,7 @@ func (m SelectNetworkModel) Init() tea.Cmd {
 }
 
 func (m SelectNetworkModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+  var cmd tea.Cmd
   switch msg := msg.(type) {
   case tea.KeyMsg:
     switch msg.String() {
@@ -110,23 +137,16 @@ func (m SelectNetworkModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
       m.errorMessage = ""
       return handleSelection(m)
     }
-  case types.NetworkStatusMsg:
-    m.connected = bool(msg)
+  case types.NetworkFailureMsg:
     m.loadingMessage = ""
-    if !m.connected {
-      m.errorMessage = "No network connection detected. Please check your connection and try again."
-    } else {
-      m.errorMessage = ""
-    }
+    m.errorMessage = "No network connection detected. Please check your connection and try again."
     return m, nil
   case types.WifiNetworkError:
     m.loadingMessage = ""
-    m.collectWifiCredentials = false
     m.errorMessage = string(msg)
     return m, nil
   case types.WiFiNetworksMsg:
     m.loadingMessage = ""
-    m.collectWifiCredentials = false
     m.networkTypes = []string{}
     m.wifiNetworks = []types.WiFiNetwork(msg)
     return m, nil
@@ -135,7 +155,42 @@ func (m SelectNetworkModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     m.spinner, cmd = m.spinner.Update(msg)
     return m, cmd
   } 
-  return m, nil
+  m.password, cmd = m.password.Update(msg)
+  return m, cmd
+}
+
+func (m SelectNetworkModel) View() string {
+  var lines string 
+  if m.loadingMessage == "" { 
+    if m.ssid != "" {
+      lines += renderWifiPassword(m.password, m.ssid)
+    } else if len(m.wifiNetworks) > 0 {
+      lines += renderWifiNetworks(m.wifiNetworks, m.selectedWifiNetwork)
+    } else {
+      lines += renderNetworkChoices(m.selectedNetworkType)
+    }
+  } else {
+    lines += m.spinner.View() + "\t" + m.loadingMessage
+  }
+
+  if m.connected {
+    lines += "\n\n" + focusedStyle().Render("Network connected successfully!")
+  }
+
+  if m.errorMessage != "" {
+    lines += "\n\n" + errorStyle().Render(m.errorMessage)
+  }
+
+  help := "\n\n(↑/↓/tab: navigate • enter: confirm • q: quit)"
+  return lines + help
+}
+
+func renderWifiPassword(password textinput.Model, ssid string) string {
+  var lines string 
+  lines += "Selected Network: " + focusedStyle().Render(ssid)
+  lines += "\nPlease enter the Wi-Fi password"
+  lines += "\n\n" + password.View()
+  return lines
 }
 
 func renderNetworkChoices(networkType string) string {
@@ -157,26 +212,3 @@ func renderWifiNetworks(networks []types.WiFiNetwork, selectedNetwork int) strin
   return lines
 }
 
-func (m SelectNetworkModel) View() string {
-  var lines string 
-  if m.loadingMessage == "" { 
-    if len(m.wifiNetworks) > 0 {
-      lines += renderWifiNetworks(m.wifiNetworks, m.selectedWifiNetwork)
-    } else {
-      lines += renderNetworkChoices(m.selectedNetworkType)
-    }
-  } else {
-    lines += m.spinner.View() + "\t" + m.loadingMessage
-  }
-
-  if m.connected {
-    lines += "\n\n" + focusedStyle().Render("Network connected successfully!")
-  }
-
-  if m.errorMessage != "" {
-    lines += "\n\n" + errorStyle().Render(m.errorMessage)
-  }
-
-  help := "\n\n(↑/↓/tab: navigate • enter: confirm • q: quit)"
-  return lines + help
-}

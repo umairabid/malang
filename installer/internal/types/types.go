@@ -33,7 +33,9 @@ type WiFiNetwork struct {
   RequiresPSK bool
 }
 
-type NetworkStatusMsg bool
+type NetworkFailureMsg bool
+
+type NetworkConnectedMsg bool
 
 type WiFiNetworksMsg []WiFiNetwork
 

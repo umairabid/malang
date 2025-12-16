@@ -27,3 +27,10 @@ func GetWiFiNetworks() ([]types.WiFiNetwork, error) {
   }
   return []types.WiFiNetwork{}, nil
 }
+
+func ConnectWithWiFi(ssid string, password string) error {
+  if os.Getenv("IS_MOCKING") == "true" {
+    return mocks.ConnectWithWiFi(ssid, password)
+  }
+  return nil
+}

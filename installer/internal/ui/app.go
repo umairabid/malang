@@ -40,6 +40,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case "q", "esc", "ctrl+c":
       return m, tea.Quit
     }
+  case types.NetworkConnectedMsg:
+    m.currentStep = InitDiskStep()
+    return m, m.currentStep.Init()
   case types.SelectedDiskMsg:
     fmt.Println("Disk selected:", msg)
     m.selectedDisk = types.Disk(msg)

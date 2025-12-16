@@ -70,3 +70,9 @@ func GetWiFiNetworks() ([]types.WiFiNetwork, error) {
 
   return networks, nil
 }
+
+func ConnectWithWiFi(ssid string, password string) error {
+  time.Sleep(2 * time.Second)
+
+  return nil
+}
