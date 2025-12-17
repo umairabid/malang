@@ -2,8 +2,8 @@
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." >/dev/null 2>&1 && pwd)
 
-rm "$ROOT_DIR/dist/*" 2>/dev/null || true
-"$ROOT_DIR/bin/build_installer"
+rm -rf "$ROOT_DIR/dist/*" 2>/dev/null || true
+"$ROOT_DIR/installer/bin/build_installer"
 
 mv "$ROOT_DIR/dist/malang_installer" "$ROOT_DIR/archlive/airootfs/usr/local/bin"
 mkarchiso -v -r -w /tmp/archiso-tmp -o "$ROOT_DIR/dist" "$ROOT_DIR/archlive"
