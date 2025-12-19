@@ -11,7 +11,7 @@ func Install(
 	disks [3]string,
 	progressChan chan<- types.ProgressUpdate,
 	streamChan chan<- types.InstallPackageStream,
-) [2]string {
+) ([2]string, error) {
 	if os.Getenv("IS_MOCKING") == "true" {
 		return mocks.Install(disks, progressChan, streamChan)
 	}

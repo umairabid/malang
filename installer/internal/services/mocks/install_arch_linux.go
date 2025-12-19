@@ -11,7 +11,7 @@ func Install(
 	disks [3]string,
 	progressChan chan<- types.ProgressUpdate,
 	streamChan chan<- types.InstallPackageStream,
-) [2]string {
+) ([2]string, error) {
   fmt.Println("Mock Install called with disks:", disks)
 	progressChan <- types.ProgressUpdate{
 		Message: "Starting mock installation process.",
@@ -44,5 +44,5 @@ func Install(
 		Success: true,
 	}
 	
-	return [2]string{"/mnt", "boot/efi"}
+	return [2]string{"/mnt", "boot/efi"}, nil
 }

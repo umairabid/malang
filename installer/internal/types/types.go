@@ -19,6 +19,10 @@ type InstallPackageStream struct {
   Source string
 }
 
+type ConfigureStream struct {
+  Line string
+}
+
 type WiFiNetwork struct {
   SSID        string
   Security    string

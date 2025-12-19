@@ -12,6 +12,7 @@ type model struct {
   currentStep tea.Model
   selectedDisk types.Disk
   drives      types.PartitionConfigMsg
+  mountPoints [2]string
 }
 
 func App() {
@@ -48,12 +49,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     m.selectedDisk = types.Disk(msg)
     m.currentStep = InitPartitionStep(m.selectedDisk)
     return m, m.currentStep.Init()
-
   case types.PartitionConfigMsg:
     m.drives = msg
     m.currentStep = InitInstallStep(m.drives)
     fmt.Println("Drives selected:", m.drives)
   
+    return m, m.currentStep.Init()
+  case types.InstallCompleteMsg:
+    m.mountPoints = msg
+    m.currentStep = InitConfigureStep(m.mountPoints)
     return m, m.currentStep.Init()
   }
   return m, cmd

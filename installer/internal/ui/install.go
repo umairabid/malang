@@ -1,58 +1,65 @@
 package ui
 
 import (
-	"fmt"
-	"strings"
+  "fmt"
+  "strings"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/lipgloss"
+  "github.com/charmbracelet/bubbles/spinner"
+  "github.com/charmbracelet/lipgloss"
 
-	tea "github.com/charmbracelet/bubbletea"
-	services "installer.malang/internal/services"
-	types "installer.malang/internal/types"
+  tea "github.com/charmbracelet/bubbletea"
+  services "installer.malang/internal/services"
+  types "installer.malang/internal/types"
 )
 
 type InstallModel struct {
-	drives       types.PartitionConfigMsg
-	progressChan chan types.ProgressUpdate
-	streamChan   chan types.InstallPackageStream
-	progressMsg  types.ProgressUpdate
-	streamMsgs   []types.InstallPackageStream
-	spinner      spinner.Model
+  drives       types.PartitionConfigMsg
+  progressChan chan types.ProgressUpdate
+  streamChan   chan types.InstallPackageStream
+  progressMsg  types.ProgressUpdate
+  streamMsgs   []types.InstallPackageStream
+  spinner      spinner.Model
 }
 
 type progressUpdateMsg types.ProgressUpdate
 type streamMsg types.InstallPackageStream
 
-func listenForProgress(progressChan chan types.ProgressUpdate) tea.Cmd {
-	return func() tea.Msg {
-		update := <-progressChan
-		return progressUpdateMsg(update)
-	}
+func listenForInstallProgress(progressChan chan types.ProgressUpdate) tea.Cmd {
+  return func() tea.Msg {
+    update := <-progressChan
+    return progressUpdateMsg(update)
+  }
 }
 
-func listenForStream(streamChan <-chan types.InstallPackageStream) tea.Cmd {
-	return func() tea.Msg {
-		stream := <-streamChan
-		return streamMsg(stream)
-	}
+func listenForInstallStream(streamChan <-chan types.InstallPackageStream) tea.Cmd {
+  return func() tea.Msg {
+    stream := <-streamChan
+    return streamMsg(stream)
+  }
 }
 
 func performInstall(
-	drives types.PartitionConfigMsg,
-	progressChan chan types.ProgressUpdate,
-	streamChan chan types.InstallPackageStream,
+  drives types.PartitionConfigMsg,
+  progressChan chan types.ProgressUpdate,
+  streamChan chan types.InstallPackageStream,
 ) tea.Cmd {
   return func() tea.Msg {
-    go func() {
-      services.Install([3]string(drives), progressChan, streamChan)
+    mountPoints, err := services.Install([3]string(drives), progressChan, streamChan)
+    progressChan <- types.ProgressUpdate{
+      Message: "Installation complete.",
+      Step:    4,
+      Success: true,
+    }
+    if err != nil {
       progressChan <- types.ProgressUpdate{
-        Message: "Installation complete.",
+        Message: fmt.Sprintf("Installation failed: %v", err),
         Step:    4,
-        Success: true,
+        Success: false,
       }
-    }()
-    return nil
+      return nil
+    } else {
+      return types.InstallCompleteMsg{mountPoints[0], mountPoints[1]}
+    }
   }
 }
 
@@ -76,8 +83,8 @@ func InitInstallStep(drives types.PartitionConfigMsg) tea.Model {
 func (m InstallModel) Init() tea.Cmd {
   return tea.Batch(
     m.spinner.Tick,
-    listenForProgress(m.progressChan),
-    listenForStream(m.streamChan),
+    listenForInstallProgress(m.progressChan),
+    listenForInstallStream(m.streamChan),
     performInstall(m.drives, m.progressChan, m.streamChan),
   )
 }
@@ -86,12 +93,12 @@ func (m InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
   switch msg := msg.(type) {
   case progressUpdateMsg:
     m.progressMsg = types.ProgressUpdate(msg)
-    return m, listenForProgress(m.progressChan)
+    return m, listenForInstallProgress(m.progressChan)
 
   case streamMsg:
     stream := types.InstallPackageStream(msg)
     m.streamMsgs = append(m.streamMsgs, stream)
-    return m, listenForStream(m.streamChan) 
+    return m, listenForInstallStream(m.streamChan) 
 
   case spinner.TickMsg:
     var cmd tea.Cmd

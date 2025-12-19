@@ -48,8 +48,19 @@ func RunCliMode() {
     }
   }()
 
-	mountPoints := services.Install(driveNames, progressChan, streamChan)
+	mountPoints, err := services.Install(driveNames, progressChan, streamChan)
   fmt.Printf("Mount points: %v\n", mountPoints)
-	services.ConfigureSystem(mountPoints)
+  if err != nil {
+    fmt.Printf("Installation failed: %v\n", err)
+    return
+  }
+
+  configureStream := make(chan types.ConfigureStream)
+  go func() {
+    for stream := range configureStream {
+      fmt.Printf("Configuring system: %s\n", stream.Line)
+    }
+  }()
+	services.ConfigureSystem(mountPoints, configureStream)
 	fmt.Println("Installed Archlinux on disk.")
 }

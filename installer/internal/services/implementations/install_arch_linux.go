@@ -90,7 +90,7 @@ func Install(
 	disks [3]string,
 	progressChan chan<- types.ProgressUpdate,
 	streamChan chan<- types.InstallPackageStream,
-) [2]string {
+) ([2]string, error) {
   progressChan <- types.ProgressUpdate{
     Message: "Starting installation process.",
     Step:    1,
@@ -99,7 +99,7 @@ func Install(
 	err := preInstallSetup(disks)
 	emitPackageInstallProgress(err, progressChan)
 	if err != nil {
-		return [2]string{RootMountPoint, BootDir}
+		return [2]string{}, err 
 	}
 	
 	err = InstallPackages(streamChan)
@@ -109,7 +109,7 @@ func Install(
 			Step:    3,
 			Success: false,
 		}
-		return [2]string{RootMountPoint, BootDir}
+		return [2]string{}, err 
 	}
 	
 	err = postInstallSetup()
@@ -127,5 +127,5 @@ func Install(
 		}
 	}
   
-	return [2]string{RootMountPoint, BootDir}
+	return [2]string{RootMountPoint, BootDir}, err
 }
