@@ -1,168 +1,167 @@
 package ui
 
 import (
-  "fmt"
-  "strconv"
+    "fmt"
+    "strconv"
 
-  tea "github.com/charmbracelet/bubbletea"
-  types "installer.malang/internal/types"
-  services "installer.malang/internal/services"
+    tea "github.com/charmbracelet/bubbletea"
+    services "installer.malang/internal/services"
+    types "installer.malang/internal/types"
 )
 
 type PartitionModel struct {
-  disk         types.Disk
-  percentages  [3]string
-  focusedField int
-  errorMsg     string
-  isPatitioning bool
+    disk                    types.Disk
+    percentages     [3]string
+    focusedField    int
+    errorMsg            string
+    isPatitioning bool
 }
 
 func InitPartitionStep(selectedDisk types.Disk) tea.Model {
-  return PartitionModel{
-    disk:         selectedDisk,
-    percentages:  [3]string{"20", "10", "70"},
-    focusedField: 0,
-    errorMsg:     "",
-    isPatitioning: false,
-  }
+    return PartitionModel{
+        disk:                    selectedDisk,
+        percentages:     [3]string{"20", "10", "70"},
+        focusedField:    0,
+        errorMsg:            "",
+        isPatitioning: false,
+    }
 }
 
-
 func paritionDisks(m PartitionModel) tea.Cmd {
-  return func() tea.Msg {
-    fmt.Println("Partitioning disk with percentages:", m.percentages)
-    values, _ := validatePercentages(m.percentages)
-    driveNames, err := services.PartitionDisk(m.disk, values)
-    if err != nil {
-      fmt.Println("Error partitioning disk:", err)
-      return types.PartitionError(err.Error())
+    return func() tea.Msg {
+        fmt.Println("Partitioning disk with percentages:", m.percentages)
+        values, _ := validatePercentages(m.percentages)
+        driveNames, err := services.PartitionDisk(m.disk, values)
+        if err != nil {
+            fmt.Println("Error partitioning disk:", err)
+            return types.PartitionError(err.Error())
+        }
+        return types.PartitionConfigMsg(driveNames)
     }
-    return types.PartitionConfigMsg(driveNames)
-  }
 }
 
 func (m PartitionModel) Init() tea.Cmd {
-  return nil
+    return nil
 }
 
 func (m PartitionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-  switch msg := msg.(type) {
-  case tea.KeyMsg:
-    switch msg.String() {
-    case "ctrl+c", "q":
-      return m, tea.Quit
+    switch msg := msg.(type) {
+    case tea.KeyMsg:
+        switch msg.String() {
+        case "ctrl+c", "q":
+            return m, tea.Quit
 
-    case "tab", "down":
-      m.focusedField = (m.focusedField + 1) % 3
-      m.errorMsg = ""
+        case "tab", "down":
+            m.focusedField = (m.focusedField + 1) % 3
+            m.errorMsg = ""
 
-    case "shift+tab", "up":
-      m.focusedField = (m.focusedField - 1 + 3) % 3
-      m.errorMsg = ""
+        case "shift+tab", "up":
+            m.focusedField = (m.focusedField - 1 + 3) % 3
+            m.errorMsg = ""
 
-    case "enter":
-      _, err := validatePercentages(m.percentages)
-      if err != nil {
-        m.errorMsg = err.Error()
-        return m, nil
-      }
-      return m, func() tea.Msg {
-        return types.StartPartitioningMsg(true)
-      }
+        case "enter":
+            _, err := validatePercentages(m.percentages)
+            if err != nil {
+                m.errorMsg = err.Error()
+                return m, nil
+            }
+            return m, func() tea.Msg {
+                return types.StartPartitioningMsg(true)
+            }
 
-    case "backspace":
-      if len(m.percentages[m.focusedField]) > 0 {
-        m.percentages[m.focusedField] = m.percentages[m.focusedField][:len(m.percentages[m.focusedField])-1]
-      }
-      m.errorMsg = ""
+        case "backspace":
+            if len(m.percentages[m.focusedField]) > 0 {
+                m.percentages[m.focusedField] = m.percentages[m.focusedField][:len(m.percentages[m.focusedField])-1]
+            }
+            m.errorMsg = ""
 
-    default:
-      if len(msg.String()) == 1 && msg.String()[0] >= '0' && msg.String()[0] <= '9' {
-        if len(m.percentages[m.focusedField]) < 3 {
-          m.percentages[m.focusedField] += msg.String()
+        default:
+            if len(msg.String()) == 1 && msg.String()[0] >= '0' && msg.String()[0] <= '9' {
+                if len(m.percentages[m.focusedField]) < 3 {
+                    m.percentages[m.focusedField] += msg.String()
+                }
+                m.errorMsg = ""
+            }
         }
-        m.errorMsg = ""
-      }
+    case types.StartPartitioningMsg:
+        m.isPatitioning = true
+        return m, paritionDisks(m)
+
+    case types.PartitionError:
+        m.isPatitioning = false
+        m.errorMsg = string(msg)
+        return m, nil
     }
-  case types.StartPartitioningMsg:
-    m.isPatitioning = true
-    return m, paritionDisks(m)
 
-  case types.PartitionError:
-    m.isPatitioning = false
-    m.errorMsg = string(msg)
     return m, nil
-  }
-
-  return m, nil
 }
 
 func (m PartitionModel) View() string {
-  title := fmt.Sprintf("Configure Partitions for %s (%s)\n\n", m.disk.Name, m.disk.SizeInGb)
+    title := fmt.Sprintf("Configure Partitions for %s (%s)\n\n", m.disk.Name, m.disk.SizeInGb)
 
-  labels := [3]string{"Boot (EFI): ", "Swap:       ", "Root:       "}
+    labels := [3]string{"Boot (EFI): ", "Swap:             ", "Root:             "}
 
-  var lines string
-  for i, label := range labels {
-    value := m.percentages[i] + "%"
-    lines += label + applyStyle(value, m.focusedField == i) + "\n"
-  }
+    var lines string
+    for i, label := range labels {
+        value := m.percentages[i] + "%"
+        lines += label + applyStyle(value, m.focusedField == i) + "\n"
+    }
 
-  totalLabel := totalLabel(m)
-  help := "\n\n(↑/↓/tab: navigate • 0-9: enter value • enter: confirm • q: quit)"
+    totalLabel := totalLabel(m)
+    help := "\n\n(↑/↓/tab: navigate • 0-9: enter value • enter: confirm • q: quit)"
 
-  errorMsg := ""
-  if m.errorMsg != "" {
-    errorMsg = "\n" + errorStyle().Render("Error: "+m.errorMsg)
-  }
+    errorMsg := ""
+    if m.errorMsg != "" {
+        errorMsg = "\n" + errorStyle().Render("Error: "+m.errorMsg)
+    }
 
-  if m.isPatitioning {
-    lines = "\nPartitioning disks, please wait...\n"
-    help = ""
-    totalLabel = ""
-    errorMsg = ""
-  }
+    if m.isPatitioning {
+        lines = "\nPartitioning disks, please wait...\n"
+        help = ""
+        totalLabel = ""
+        errorMsg = ""
+    }
 
-  return title + lines + totalLabel + errorMsg + help
+    return title + lines + totalLabel + errorMsg + help
 }
 
 func totalLabel(m PartitionModel) string {
-  total := 0
-  for _, percent := range m.percentages {
-    val, _ := strconv.Atoi(percent)
-    total += val
-  }
+    total := 0
+    for _, percent := range m.percentages {
+        val, _ := strconv.Atoi(percent)
+        total += val
+    }
 
-  label := fmt.Sprintf("Total: %d%%", total)
-  if total > 100 {
-    label = errorStyle().Render(label + " (exceeds 100%)")
-  } else if total < 100 {
-    label = errorStyle().Render(label + " (less than 100%)")
-  }
-  return label
+    label := fmt.Sprintf("Total: %d%%", total)
+    if total > 100 {
+        label = errorStyle().Render(label + " (exceeds 100%)")
+    } else if total < 100 {
+        label = errorStyle().Render(label + " (less than 100%)")
+    }
+    return label
 }
 
 func validatePercentages(percentages [3]string) ([3]int, error) {
-  labels := [3]string{"boot", "swap", "root"}
-  var values [3]int
-  total := 0
+    labels := [3]string{"boot", "swap", "root"}
+    var values [3]int
+    total := 0
 
-  for i, percent := range percentages {
-    val, err := strconv.Atoi(percent)
-    if err != nil || val < 0 {
-      return [3]int{}, fmt.Errorf("%s percentage must be a valid positive number", labels[i])
+    for i, percent := range percentages {
+        val, err := strconv.Atoi(percent)
+        if err != nil || val < 0 {
+            return [3]int{}, fmt.Errorf("%s percentage must be a valid positive number", labels[i])
+        }
+        values[i] = val
+        total += val
     }
-    values[i] = val
-    total += val
-  }
 
-  if total > 100 {
-    return [3]int{}, fmt.Errorf("total percentage (%d%%) exceeds 100%%", total)
-  }
+    if total > 100 {
+        return [3]int{}, fmt.Errorf("total percentage (%d%%) exceeds 100%%", total)
+    }
 
-  if total < 100 {
-    return [3]int{}, fmt.Errorf("total percentage (%d%%) is less than 100%%", total)
-  }
+    if total < 100 {
+        return [3]int{}, fmt.Errorf("total percentage (%d%%) is less than 100%%", total)
+    }
 
-  return values, nil
+    return values, nil
 }

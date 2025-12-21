@@ -1,36 +1,36 @@
 package services
 
 import (
-	"os"
-	"installer.malang/internal/services/mocks"
+    "installer.malang/internal/services/mocks"
+    "os"
 
-  types "installer.malang/internal/types"
+    types "installer.malang/internal/types"
 )
 
 func SelectNetwork() (bool, error) {
-	if os.Getenv("IS_MOCKING") == "true" {
-		return mocks.SelectNetwork()
-	}
-	return false, nil 
+    if os.Getenv("IS_MOCKING") == "true" {
+        return mocks.SelectNetwork()
+    }
+    return false, nil
 }
 
 func CheckNetworkConnection() bool {
-  if os.Getenv("IS_MOCKING") == "true" {
-    return mocks.CheckNetworkConnection()
-  }
-  return false
+    if os.Getenv("IS_MOCKING") == "true" {
+        return mocks.CheckNetworkConnection()
+    }
+    return false
 }
 
 func GetWiFiNetworks() ([]types.WiFiNetwork, error) {
-  if os.Getenv("IS_MOCKING") == "true" {
-    return mocks.GetWiFiNetworks()
-  }
-  return []types.WiFiNetwork{}, nil
+    if os.Getenv("IS_MOCKING") == "true" {
+        return mocks.GetWiFiNetworks()
+    }
+    return []types.WiFiNetwork{}, nil
 }
 
 func ConnectWithWiFi(ssid string, password string) error {
-  if os.Getenv("IS_MOCKING") == "true" {
-    return mocks.ConnectWithWiFi(ssid, password)
-  }
-  return nil
+    if os.Getenv("IS_MOCKING") == "true" {
+        return mocks.ConnectWithWiFi(ssid, password)
+    }
+    return nil
 }
