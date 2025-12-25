@@ -7,6 +7,9 @@ import (
 )
 
 func RunCliMode() {
+	networks, err := services.GetWiFiNetworks()
+	fmt.Println(networks, err)
+
     disks := services.CollectDisks()
     fmt.Println("Available disks, select by index:")
     for i, disk := range disks {

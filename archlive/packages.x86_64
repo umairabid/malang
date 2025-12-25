@@ -29,6 +29,7 @@ psmisc
 kbd
 nano
 parted
+networkmanager
 
 # Terminal support (CRITICAL for getty)
 ncurses
