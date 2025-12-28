@@ -54,3 +54,8 @@ type PartitionConfigMsg [3]string
 type PartitionError string
 
 type InstallCompleteMsg [2]string
+
+type UserConfig struct {
+	Username string
+	Password string
+}

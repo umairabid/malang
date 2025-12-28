@@ -28,5 +28,28 @@ func ConfigureSystem(mountPoints [2]string, progressChan chan types.ConfigureStr
         {Args: []string{"grub-mkconfig", "-o", "/boot/grub/grub.cfg"}},
     }
     err := utils.RunCommands(commands)
-    return err
+    if err != nil {
+        return err
+    }
+
+    progressChan <- types.ConfigureStream{Line: "Configuration complete"}
+    return nil
+}
+
+func CreateUser(userConfig types.UserConfig, progressChan chan types.ConfigureStream) error {
+    progressChan <- types.ConfigureStream{Line: "Creating user " + userConfig.Username + "..."}
+
+    // Create user with home directory
+    password := userConfig.Password + "\n" + userConfig.Password + "\n"
+    commands := []utils.Command{
+        {Args: []string{"useradd", "-m", "-G", "wheel", userConfig.Username}},
+        {Args: []string{"passwd", userConfig.Username}, Stdin: &password},
+    }
+
+    if err := utils.RunCommands(commands); err != nil {
+        return err
+    }
+
+    progressChan <- types.ConfigureStream{Line: "User created successfully"}
+    return nil
 }
