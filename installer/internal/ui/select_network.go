@@ -1,6 +1,8 @@
 package ui
 
 import (
+    "fmt"
+
     "github.com/charmbracelet/bubbles/spinner"
     "github.com/charmbracelet/bubbles/textinput"
 
@@ -11,12 +13,14 @@ import (
 
 const WIRED = "Wired"
 const WIFI = "Wi-Fi"
+const VIEWPORT_HEIGHT = 10
 
 type SelectNetworkModel struct {
     networkTypes                []string
     selectedNetworkType string
     wifiNetworks                []types.WiFiNetwork
     selectedWifiNetwork int
+    viewportOffset          int
     ssid                                string
     password                        textinput.Model
     connected                     bool
@@ -41,6 +45,7 @@ func InitNetworkStep() tea.Model {
         selectedNetworkType: WIRED,
         wifiNetworks:                []types.WiFiNetwork{},
         selectedWifiNetwork: 0,
+        viewportOffset:          0,
         ssid:                                "",
         password:                        initTextInput(),
         connected:                     false,
@@ -89,6 +94,16 @@ func handleChange(m SelectNetworkModel, key string) SelectNetworkModel {
         } else if key == "down" || key == "tab" {
             m.selectedWifiNetwork = (m.selectedWifiNetwork + 1) % int(len(m.wifiNetworks))
         }
+
+        // Adjust viewport to keep selected item visible
+        if m.selectedWifiNetwork < m.viewportOffset {
+            // Selected item is above viewport, scroll up
+            m.viewportOffset = m.selectedWifiNetwork
+        } else if m.selectedWifiNetwork >= m.viewportOffset+VIEWPORT_HEIGHT {
+            // Selected item is below viewport, scroll down
+            m.viewportOffset = m.selectedWifiNetwork - VIEWPORT_HEIGHT + 1
+        }
+
         return m
     }
 
@@ -149,6 +164,7 @@ func (m SelectNetworkModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.loadingMessage = ""
         m.networkTypes = []string{}
         m.wifiNetworks = []types.WiFiNetwork(msg)
+        m.viewportOffset = 0
         return m, nil
     case spinner.TickMsg:
         var cmd tea.Cmd
@@ -165,7 +181,7 @@ func (m SelectNetworkModel) View() string {
         if m.ssid != "" {
             lines += renderWifiPassword(m.password, m.ssid)
         } else if len(m.wifiNetworks) > 0 {
-            lines += renderWifiNetworks(m.wifiNetworks, m.selectedWifiNetwork)
+            lines += renderWifiNetworks(m.wifiNetworks, m.selectedWifiNetwork, m.viewportOffset)
         } else {
             lines += renderNetworkChoices(m.selectedNetworkType)
         }
@@ -203,11 +219,38 @@ func renderNetworkChoices(networkType string) string {
     return lines
 }
 
-func renderWifiNetworks(networks []types.WiFiNetwork, selectedNetwork int) string {
+func renderWifiNetworks(networks []types.WiFiNetwork, selectedNetwork int, viewportOffset int) string {
     var lines string
+    totalNetworks := len(networks)
+
     lines += "Select Wi-Fi Network:\n\n"
-    for i := range networks {
+
+    // Calculate viewport bounds
+    start := viewportOffset
+    end := viewportOffset + VIEWPORT_HEIGHT
+    if end > totalNetworks {
+        end = totalNetworks
+    }
+
+    // Show indicator if there are items above
+    if start > 0 {
+        lines += "  ▲ More above...\n"
+    }
+
+    // Render visible networks
+    for i := start; i < end; i++ {
         lines += applyStyle(networks[i].SSID, selectedNetwork == i) + "\n"
     }
+
+    // Show indicator if there are items below
+    if end < totalNetworks {
+        lines += "  ▼ More below...\n"
+    }
+
+    // Show position indicator
+    if totalNetworks > VIEWPORT_HEIGHT {
+        lines += fmt.Sprintf("\nShowing %d-%d of %d", start+1, end, totalNetworks)
+    }
+
     return lines
 }

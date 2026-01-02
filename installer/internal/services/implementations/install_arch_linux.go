@@ -4,6 +4,7 @@ import (
     "bufio"
     "installer.malang/internal/utils"
     "io"
+    "os"
     "os/exec"
 
     types "installer.malang/internal/types"
@@ -42,6 +43,34 @@ func postInstallSetup() error {
     return utils.RunCommands(prepareCommands)
 }
 
+func configureGreetd() error {
+    configDir := RootMountPoint + "/etc/greetd"
+    if err := os.MkdirAll(configDir, 0755); err != nil {
+        return err
+    }
+
+	greetdConfigPath := "/etc/greetd/config.toml"
+    configPath := configDir + "/config.toml"
+    return utils.RunCommands([]utils.Command{
+		{Args: []string{"cp", greetdConfigPath, configPath}},
+	})
+}
+
+func enableServices() error {
+    // Configure greetd first
+    if err := configureGreetd(); err != nil {
+        return err
+    }
+
+    serviceCommands := []utils.Command{
+        // Enable NetworkManager
+        {Args: []string{"arch-chroot", RootMountPoint, "systemctl", "enable", "NetworkManager.service"}},
+        // Enable greetd (display manager)
+        {Args: []string{"arch-chroot", RootMountPoint, "systemctl", "enable", "greetd.service"}},
+    }
+    return utils.RunCommands(serviceCommands)
+}
+
 func startStream(pipe io.ReadCloser, streamName string, streamChan chan<- types.InstallPackageStream) {
     go func() {
         defer pipe.Close()
@@ -56,7 +85,8 @@ func startStream(pipe io.ReadCloser, streamName string, streamChan chan<- types.
 }
 
 func InstallPackages(streamChan chan<- types.InstallPackageStream) error {
-    cmd := exec.Command("pacstrap", "/mnt", "base", "linux", "linux-firmware", "vim", "networkmanager", "efibootmgr", "grub")
+    cmd := exec.Command("pacstrap", "/mnt", "base", "linux", "linux-firmware", "vim", "networkmanager", "efibootmgr", "grub",
+	"sway", "swaybg", "swaylock", "swayidle", "greetd", "greetd-tuigreet", "wofi", "waybar", "foot", "wmenu", "firefox", "sudo")
     stderr, _ := cmd.StderrPipe()
     stdout, _ := cmd.StdoutPipe()
 
@@ -119,13 +149,30 @@ func Install(
             Step:        3,
             Success: false,
         }
-    } else {
-        progressChan <- types.ProgressUpdate{
-            Message: "System installation completed successfully.",
-            Step:        3,
-            Success: true,
-        }
+        return [2]string{}, err
     }
 
-    return [2]string{RootMountPoint, BootDir}, err
+    progressChan <- types.ProgressUpdate{
+        Message: "Enabling system services.",
+        Step:        3,
+        Success: true,
+    }
+
+    err = enableServices()
+    if err != nil {
+        progressChan <- types.ProgressUpdate{
+            Message: "Failed to enable services: " + err.Error(),
+            Step:        4,
+            Success: false,
+        }
+        return [2]string{}, err
+    }
+
+    progressChan <- types.ProgressUpdate{
+        Message: "System installation completed successfully.",
+        Step:        4,
+        Success: true,
+    }
+
+    return [2]string{RootMountPoint, BootDir}, nil
 }
